@@ -10,6 +10,7 @@ namespace FitnessWebAPI.Data
         public AppDbContext(DbContextOptions options) : base(options)
         {
         }
+        public DbSet<FitnessWebAPI.Models.Meal> Meal { get; set; } = default!;
 
     }
 }
