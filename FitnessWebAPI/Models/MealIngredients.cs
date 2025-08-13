@@ -3,8 +3,10 @@
     public class MealIngredients
     {
         public int Id { get; set; }
-        public List<Ingredient> Ingredients { get; set; } = new List<Ingredient>();
-        public List<Meal> Meals { get; set; } = new List<Meal>();
+        public Ingredient Ingredient { get; set; }
+        public int IngredientId { get; set; }
+        public Meal Meal { get; set; }
+        public int MealId { get; set; }
         public int Amount { get; set; }
     }
 }

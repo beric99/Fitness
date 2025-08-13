@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FitnessWebAPI.Data;
 using FitnessWebAPI.Models;
+using FitnessWebAPI.Models.Dtos;
 
 namespace FitnessWebAPI.Controllers
 {
@@ -23,17 +24,40 @@ namespace FitnessWebAPI.Controllers
 
         // GET: api/Meals
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Meal>>> GetMeal()
+        public async Task<ActionResult<IEnumerable<MealDto>>> GetMeal()
         {
-            return await _context.Meal.ToListAsync();
+            return await _context.Meals.Select(m => new MealDto
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Calories = m.Calories,
+                Protein = m.Protein,
+                Ingredients = m.Ingredients.Select(i => new MealIngredientDto
+                {
+                    IngredientId = i.IngredientId,
+                    Amount = i.Amount,
+                }).ToList()
+
+            }).ToListAsync();
         }
 
         // GET: api/Meals/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Meal>> GetMeal(int id)
+        public async Task<ActionResult<MealDto>> GetMeal(int id)
         {
-            var meal = await _context.Meal.FindAsync(id);
+            var meal = await _context.Meals.Select(m => new MealDto
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Calories = m.Calories,
+                Protein = m.Protein,
+                Ingredients = m.Ingredients.Select(i => new MealIngredientDto
+                {
+                    IngredientId = i.IngredientId,
+                    Amount = i.Amount,
+                }).ToList()
 
+            }).FirstAsync(m => m.Id == id);
             if (meal == null)
             {
                 return NotFound();
@@ -42,67 +66,89 @@ namespace FitnessWebAPI.Controllers
             return meal;
         }
 
-        // PUT: api/Meals/5
+        // POST: api/Meals
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutMeal(int id, Meal meal)
+        [HttpPost]
+        public async Task<ActionResult<MealDto>> PostMeal(MealDto mealDto)
         {
-            if (id != meal.Id)
+            var meal = new Meal()
+            {
+                Id = mealDto.Id,
+                Name = mealDto.Name,
+                Calories = mealDto.Calories,
+                Protein = mealDto.Protein,
+                Ingredients = mealDto.Ingredients.Select(i => new MealIngredients()
+                {
+                    MealId = mealDto.Id,
+                    IngredientId = i.IngredientId,
+                    Amount = i.Amount,
+                }).ToList()
+            };
+
+            _context.Meals.Add(meal);
+            await _context.SaveChangesAsync();
+
+            return Created();
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutMeal(int id, MealDto mealDto)
+        {
+            if (id != mealDto.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(meal).State = EntityState.Modified;
+            var existingMeal = await _context.Meals
+                .Include(m => m.Ingredients)
+                .FirstOrDefaultAsync(m => m.Id == id);
 
-            try
+            if (existingMeal == null)
             {
-                await _context.SaveChangesAsync();
+                return NotFound();
             }
-            catch (DbUpdateConcurrencyException)
+
+            existingMeal.Name = mealDto.Name;
+            existingMeal.Calories = mealDto.Calories;
+            existingMeal.Protein = mealDto.Protein;
+
+            foreach (var ingredient in mealDto.Ingredients)
             {
-                if (!MealExists(id))
+                var existingIngredient = existingMeal.Ingredients.FirstOrDefault(i => i.Id == ingredient.IngredientId);
+                if (existingIngredient == null)
                 {
-                    return NotFound();
+                    existingMeal.Ingredients.Add(new MealIngredients
+                    {
+                        MealId = id,
+                        IngredientId = ingredient.IngredientId,
+                        Amount = ingredient.Amount
+                    });
                 }
                 else
                 {
-                    throw;
+                    existingIngredient.Amount = ingredient.Amount;
                 }
+                
             }
-
-            return NoContent();
-        }
-
-        // POST: api/Meals
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Meal>> PostMeal(Meal meal)
-        {
-            _context.Meal.Add(meal);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetMeal", new { id = meal.Id }, meal);
+            return NoContent();
         }
 
         // DELETE: api/Meals/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMeal(int id)
         {
-            var meal = await _context.Meal.FindAsync(id);
+            var meal = await _context.Meals.FindAsync(id);
             if (meal == null)
             {
                 return NotFound();
             }
 
-            _context.Meal.Remove(meal);
+            _context.Meals.Remove(meal);
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool MealExists(int id)
-        {
-            return _context.Meal.Any(e => e.Id == id);
         }
     }
 }

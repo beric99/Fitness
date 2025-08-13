@@ -6,11 +6,11 @@ namespace FitnessWebAPI.Data
     public class AppDbContext : DbContext
     {
         public DbSet<Ingredient> Ingredients { get; set; }
+        public DbSet<Meal> Meals { get; set; }
+        public DbSet<MealIngredients> MealIngredients { get; set; }
 
         public AppDbContext(DbContextOptions options) : base(options)
         {
         }
-        public DbSet<FitnessWebAPI.Models.Meal> Meal { get; set; } = default!;
-
     }
 }
